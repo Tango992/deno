@@ -585,6 +585,46 @@ function makeSystemErrorWithCode(key: string, msgPrfix: string) {
   };
 }
 
+export const ERR_FS_CP_DIR_TO_NON_DIR = makeSystemErrorWithCode(
+  "ERR_FS_CP_DIR_TO_NON_DIR",
+  "Cannot overwrite non-directory with directory",
+);
+
+export const ERR_FS_CP_EEXIST = makeSystemErrorWithCode(
+  "ERR_FS_CP_EEXIST",
+  "Target already exists",
+);
+
+export const ERR_FS_CP_EINVAL = makeSystemErrorWithCode(
+  "ERR_FS_CP_EINVAL",
+  "Invalid src or dest",
+);
+
+export const ERR_FS_CP_FIFO_PIPE = makeSystemErrorWithCode(
+  "ERR_FS_CP_FIFO_PIPE",
+  "Cannot copy a FIFO pipe",
+);
+
+export const ERR_FS_CP_NON_DIR_TO_DIR = makeSystemErrorWithCode(
+  "ERR_FS_CP_NON_DIR_TO_DIR",
+  "Cannot overwrite directory with non-directory",
+);
+
+export const ERR_FS_CP_SOCKET = makeSystemErrorWithCode(
+  "ERR_FS_CP_SOCKET",
+  "Cannot copy a socket file",
+);
+
+export const ERR_FS_CP_SYMLINK_TO_SUBDIRECTORY = makeSystemErrorWithCode(
+  "ERR_FS_CP_SYMLINK_TO_SUBDIRECTORY",
+  "Cannot overwrite symlink in subdirectory of self",
+);
+
+export const ERR_FS_CP_UNKNOWN = makeSystemErrorWithCode(
+  "ERR_FS_CP_UNKNOWN",
+  "Cannot copy an unknown file type",
+);
+
 export const ERR_FS_EISDIR = makeSystemErrorWithCode(
   "ERR_FS_EISDIR",
   "Path is a directory",
