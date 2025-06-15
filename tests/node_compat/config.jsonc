@@ -563,6 +563,7 @@
       "test-fs-close.js",
       "test-fs-constants.js",
       "test-fs-copyfile.js",
+      "test-fs-cp.mjs",
       "test-fs-empty-readStream.js",
       "test-fs-fchown.js",
       "test-fs-fmap.js",
