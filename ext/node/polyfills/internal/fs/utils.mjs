@@ -823,6 +823,10 @@ const defaultRmdirOptions = {
   recursive: false,
 };
 
+/**
+ * @import { CopyOptions, CopySyncOptions } from "ext:deno_node/_fs/_fs_cp.ts"
+ * @type {(options: unknown) => CopyOptions | CopySyncOptions}
+ */
 export const validateCpOptions = hideStackFrames((options) => {
   if (options === undefined) {
     return { ...defaultCpOptions };
