@@ -304,6 +304,7 @@
 "parallel/test-dgram-send-multi-buffer-copy.js" = {}
 "parallel/test-dgram-send-multi-string-array.js" = {}
 "parallel/test-dgram-setBroadcast.js" = {}
+"parallel/test-dgram-setTTL.js" = {}
 "parallel/test-dgram-udp4.js" = {}
 "parallel/test-dgram-udp6-send-default-host.js" = {}
 "parallel/test-dgram-unref.js" = {}

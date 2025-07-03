@@ -30,6 +30,7 @@ import {
   op_net_set_broadcast_udp,
   op_net_set_multi_loopback_udp,
   op_net_set_multi_ttl_udp,
+  op_net_set_ttl_udp,
   op_set_keepalive,
   op_set_nodelay,
 } from "ext:core/ops";
@@ -382,6 +383,7 @@ const _dropMembership = Symbol("dropMembership");
 const _setBroadcast = Symbol("setBroadcast");
 const _setMultiLoopback = Symbol("setMultiLoopback");
 const _setMulticastTTL = Symbol("setMulticastTTL");
+const _setTTL = Symbol("setTTL");
 
 function setDatagramBroadcast(conn, broadcast) {
   return conn[_setBroadcast](broadcast);
@@ -397,6 +399,10 @@ function dropMembership(conn, v6, addr, multiInterface) {
 
 function setMulticastTTL(conn, ttl) {
   return conn[_setMulticastTTL](ttl);
+}
+
+function setTTL(conn, ttl) {
+  return conn[_setTTL](ttl);
 }
 
 class DatagramConn {
@@ -433,6 +439,10 @@ class DatagramConn {
 
   [_setMultiLoopback](v6, loopback) {
     return op_net_set_multi_loopback_udp(this.#rid, !v6, loopback);
+  }
+
+  [_setTTL](ttl) {
+    return op_net_set_ttl_udp(this.#rid, ttl);
   }
 
   async joinMulticastV4(addr, multiInterface) {
@@ -734,6 +744,7 @@ export {
   setDatagramBroadcast,
   setMulticastLoopback,
   setMulticastTTL,
+  setTTL,
   TcpConn,
   UnixConn,
   UpgradedConn,

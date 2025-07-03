@@ -392,8 +392,21 @@ export class UDP extends HandleWrap {
     }
   }
 
-  setTTL(_ttl: number): number {
-    notImplemented("udp.UDP.prototype.setTTL");
+  setTTL(ttl: number): number {
+    if (ttl < 1 || ttl > 255) {
+      return codeMap.get("EINVAL")!;
+    }
+
+    if (!this.#listener) {
+      return codeMap.get("EBADF")!;
+    }
+
+    try {
+      net.setTTL(this.#listener, ttl);
+      return 0;
+    } catch {
+      return codeMap.get("EINVAL")!;
+    }
   }
 
   override unref() {

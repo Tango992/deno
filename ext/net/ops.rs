@@ -410,6 +410,24 @@ pub async fn op_net_set_multi_ttl_udp(
 }
 
 #[op2(async)]
+pub async fn op_net_set_ttl_udp(
+  state: Rc<RefCell<OpState>>,
+  #[smi] rid: ResourceId,
+  #[smi] ttl: u32,
+) -> Result<(), NetError> {
+  let resource = state
+    .borrow_mut()
+    .resource_table
+    .get::<UdpSocketResource>(rid)
+    .map_err(|_| NetError::SocketClosed)?;
+  let socket = RcRef::map(&resource, |r| &r.socket).borrow().await;
+
+  socket.set_ttl(ttl)?;
+
+  Ok(())
+}
+
+#[op2(async)]
 pub async fn op_net_set_broadcast_udp(
   state: Rc<RefCell<OpState>>,
   #[smi] rid: ResourceId,
