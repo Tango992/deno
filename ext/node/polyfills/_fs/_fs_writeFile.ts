@@ -8,10 +8,7 @@ import { pathFromURL } from "ext:deno_web/00_infra.js";
 import { Buffer } from "node:buffer";
 import {
   CallbackWithError,
-  checkEncoding,
-  getEncoding,
   getOpenOptions,
-  isFileOptions,
   WriteFileOptions,
 } from "ext:deno_node/_fs/_fs_common.ts";
 import { isWindows } from "ext:deno_node/_util/os.ts";
@@ -20,6 +17,7 @@ import {
   denoErrorToNodeError,
 } from "ext:deno_node/internal/errors.ts";
 import {
+  getOptions,
   validateStringAfterArrayBufferView,
 } from "ext:deno_node/internal/fs/utils.mjs";
 import { promisify } from "ext:deno_node/internal/util.mjs";
@@ -38,8 +36,18 @@ export function writeFile(
 ) {
   const callbackFn: CallbackWithError | undefined =
     optOrCallback instanceof Function ? optOrCallback : callback;
-  const options: Encodings | WriteFileOptions | undefined =
-    optOrCallback instanceof Function ? undefined : optOrCallback;
+
+  const {
+    encoding,
+    flag,
+    mode,
+    signal,
+  } = getOptions(optOrCallback, {
+    encoding: "utf8",
+    mode: 0o666,
+    flag: "w",
+    flush: false,
+  } as WriteFileOptions);
 
   if (!callbackFn) {
     throw new TypeError("Callback must be a function.");
@@ -48,16 +56,7 @@ export function writeFile(
   pathOrRid = pathOrRid instanceof URL ? pathFromURL(pathOrRid) : pathOrRid;
   pathOrRid = pathOrRid instanceof FileHandle ? pathOrRid.fd : pathOrRid;
 
-  const flag: string | undefined = isFileOptions(options)
-    ? options.flag
-    : undefined;
-
-  const mode: number | undefined = isFileOptions(options)
-    ? options.mode
-    : undefined;
-
-  const encoding = checkEncoding(getEncoding(options)) || "utf8";
-  const openOptions = getOpenOptions(flag || "w");
+  const openOptions = getOpenOptions(flag);
 
   if (!ArrayBuffer.isView(data)) {
     validateStringAfterArrayBufferView(data, "data");
@@ -80,9 +79,6 @@ export function writeFile(
         await Deno.chmod(pathOrRid as string, mode);
       }
 
-      const signal: AbortSignal | undefined = isFileOptions(options)
-        ? options.signal
-        : undefined;
       await writeAll(file, data as Uint8Array, { signal });
     } catch (e) {
       error = e instanceof Error
@@ -109,16 +105,18 @@ export function writeFileSync(
 ) {
   pathOrRid = pathOrRid instanceof URL ? pathFromURL(pathOrRid) : pathOrRid;
 
-  const flag: string | undefined = isFileOptions(options)
-    ? options.flag
-    : undefined;
+  const {
+    encoding,
+    flag,
+    mode,
+  } = getOptions(options, {
+    encoding: "utf8",
+    mode: 0o666,
+    flag: "w",
+    flush: false,
+  } as WriteFileOptions);
 
-  const mode: number | undefined = isFileOptions(options)
-    ? options.mode
-    : undefined;
-
-  const encoding = checkEncoding(getEncoding(options)) || "utf8";
-  const openOptions = getOpenOptions(flag || "w");
+  const openOptions = getOpenOptions(flag);
 
   if (!ArrayBuffer.isView(data)) {
     validateStringAfterArrayBufferView(data, "data");

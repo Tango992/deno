@@ -7,11 +7,15 @@ import { basename } from "node:path";
 import { EventEmitter } from "node:events";
 import { notImplemented } from "ext:deno_node/_utils.ts";
 import { promisify } from "node:util";
-import { getValidatedPath } from "ext:deno_node/internal/fs/utils.mjs";
+import {
+  getOptions,
+  getValidatedPath,
+} from "ext:deno_node/internal/fs/utils.mjs";
 import { validateFunction } from "ext:deno_node/internal/validators.mjs";
 import { stat, Stats } from "ext:deno_node/_fs/_fs_stat.ts";
 import { Buffer } from "node:buffer";
 import { delay } from "ext:deno_node/_util/async.ts";
+import { clearTimeout, setTimeout } from "node:timers";
 
 const statPromisified = promisify(stat);
 const statAsync = async (filename: string): Promise<Stats | null> => {
@@ -106,11 +110,8 @@ export function watch(
     : typeof optionsOrListener2 === "function"
     ? optionsOrListener2
     : undefined;
-  const options = typeof optionsOrListener === "object"
-    ? optionsOrListener
-    : typeof optionsOrListener2 === "object"
-    ? optionsOrListener2
-    : undefined;
+
+  const options = getOptions(optionsOrListener);
 
   const watchPath = getValidatedPath(filename).toString();
 
@@ -165,6 +166,8 @@ export function watchPromise(
   },
 ): AsyncIterable<{ eventType: string; filename: string | Buffer | null }> {
   const watchPath = getValidatedPath(filename).toString();
+
+  options = getOptions(options);
 
   const watcher = Deno.watchFs(watchPath, {
     recursive: options?.recursive ?? false,

@@ -2,6 +2,7 @@
 
 import { promisify } from "ext:deno_node/internal/util.mjs";
 import { primordials } from "ext:core/mod.js";
+import { getOptions } from "ext:deno_node/internal/fs/utils.mjs";
 
 type Options = { encoding: string };
 type Callback = (err: Error | null, path?: string) => void;
@@ -19,6 +20,10 @@ export function realpath(
   if (!callback) {
     throw new Error("No callback function supplied");
   }
+
+  // TODO(Tango992): Spike Deno.realPath OP
+  getOptions(options);
+
   PromisePrototypeThen(
     Deno.realPath(path),
     (path) => callback!(null, path),
@@ -33,7 +38,9 @@ export const realpathPromise = promisify(realpath) as (
   options?: Options,
 ) => Promise<string>;
 
-export function realpathSync(path: string): string {
+export function realpathSync(path: string, options?: Options): string {
+  // TODO(Tango992): Spike Deno.realPath SyncOP
+  getOptions(options);
   return Deno.realPathSync(path);
 }
 

@@ -5,9 +5,8 @@
 
 import {
   BinaryOptionsArgument,
+  type FileOptions,
   FileOptionsArgument,
-  getEncoding,
-  getSignal,
   TextOptionsArgument,
 } from "ext:deno_node/_fs/_fs_common.ts";
 import { Buffer } from "node:buffer";
@@ -21,15 +20,16 @@ import {
 } from "ext:deno_node/_utils.ts";
 import { FsFile } from "ext:deno_fs/30_fs.js";
 import { denoErrorToNodeError } from "ext:deno_node/internal/errors.ts";
+import { getOptions } from "ext:deno_node/internal/fs/utils.mjs";
 
 function maybeDecode(data: Uint8Array, encoding: TextEncodings): string;
 function maybeDecode(
   data: Uint8Array,
-  encoding: BinaryEncodings | null,
+  encoding?: BinaryEncodings | null,
 ): Buffer;
 function maybeDecode(
   data: Uint8Array,
-  encoding: Encodings | null,
+  encoding?: Encodings | null,
 ): string | Buffer {
   const buffer = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
   if (encoding && encoding !== "binary") return buffer.toString(encoding);
@@ -71,8 +71,8 @@ export function readFile(
     cb = callback;
   }
 
-  const encoding = getEncoding(optOrCallback);
-  const signal = getSignal(optOrCallback);
+  const options = getOptions(optOrCallback, { flag: "r" } as FileOptions);
+  const encoding = options.encoding;
 
   let p: Promise<Uint8Array>;
   if (path instanceof FileHandle) {
@@ -82,7 +82,7 @@ export function readFile(
     const fsFile = new FsFile(path, Symbol.for("Deno.internal.FsFile"));
     p = readAll(fsFile);
   } else {
-    p = Deno.readFile(path, { signal: signal });
+    p = Deno.readFile(path, { signal: options.signal });
   }
 
   if (cb) {
@@ -123,6 +123,7 @@ export function readFileSync(
   opt?: FileOptionsArgument,
 ): string | Buffer {
   path = path instanceof URL ? pathFromURL(path) : path;
+  opt = getOptions(opt, { flag: "r" });
   let data;
   if (typeof path === "number") {
     const fsFile = new FsFile(path, Symbol.for("Deno.internal.FsFile"));
@@ -134,7 +135,7 @@ export function readFileSync(
       throw denoErrorToNodeError(err, { path, syscall: "open" });
     }
   }
-  const encoding = getEncoding(opt);
+  const encoding = opt.encoding;
   if (encoding && encoding !== "binary") {
     const text = maybeDecode(data, encoding);
     return text;

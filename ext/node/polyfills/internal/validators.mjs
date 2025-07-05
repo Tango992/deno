@@ -231,7 +231,11 @@ const validateOneOf = hideStackFrames(
   },
 );
 
-export function validateEncoding(data, encoding) {
+/**
+ * @param {string} data
+ * @param {string} encoding
+ */
+const validateEncoding = hideStackFrames((data, encoding) => {
   const normalizedEncoding = normalizeEncoding(encoding);
   const length = data.length;
 
@@ -242,7 +246,7 @@ export function validateEncoding(data, encoding) {
       `is invalid for data of length ${length}`,
     );
   }
-}
+});
 
 // Check that the port number is not NaN when coerced to a number,
 // is an integer and that it falls within the legal range of port numbers.
@@ -392,6 +396,7 @@ export {
   validateBoolean,
   validateBooleanArray,
   validateBuffer,
+  validateEncoding,
   validateFunction,
   validateInt32,
   validateInteger,

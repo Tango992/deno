@@ -2,6 +2,7 @@
 
 "use strict";
 
+import { kEmptyObject } from "ext:deno_node/internal/util.mjs";
 import { primordials } from "ext:core/mod.js";
 const {
   ArrayIsArray,
@@ -154,7 +155,7 @@ export const kMaxUserId = 2 ** 32 - 1;
 export function assertEncoding(encoding) {
   if (encoding && !Buffer.isEncoding(encoding)) {
     const reason = "is invalid encoding";
-    throw new ERR_INVALID_ARG_VALUE(encoding, "encoding", reason);
+    throw new ERR_INVALID_ARG_VALUE("encoding", encoding, reason);
   }
 }
 
@@ -341,7 +342,13 @@ export function getDirent(path, name, type, callback) {
   }
 }
 
-export function getOptions(options, defaultOptions) {
+/**
+ * @template {Record} T
+ * @param {unknown} options
+ * @param {T} [defaultOptions = {}]
+ * @return {T}
+ */
+export function getOptions(options, defaultOptions = kEmptyObject) {
   if (
     options === null || options === undefined ||
     typeof options === "function"

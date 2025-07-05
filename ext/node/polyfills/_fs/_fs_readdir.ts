@@ -8,6 +8,7 @@ import { denoErrorToNodeError } from "ext:deno_node/internal/errors.ts";
 import {
   type Dirent,
   direntFromDeno,
+  getOptions,
   getValidatedPath,
 } from "ext:deno_node/internal/fs/utils.mjs";
 import { Buffer } from "node:buffer";
@@ -49,22 +50,21 @@ export function readdir(
     (typeof optionsOrCallback === "function"
       ? optionsOrCallback
       : maybeCallback) as readDirBoth | undefined;
-  const options = typeof optionsOrCallback === "object"
-    ? optionsOrCallback
-    : null;
+  const options = getOptions<readDirOptions>(optionsOrCallback);
   path = getValidatedPath(path).toString();
 
   if (!callback) throw new Error("No callback function supplied");
 
-  if (options?.encoding) {
-    try {
-      new TextDecoder(options.encoding);
-    } catch {
-      throw new Error(
-        `TypeError [ERR_INVALID_OPT_VALUE_ENCODING]: The value "${options.encoding}" is invalid for option "encoding"`,
-      );
-    }
-  }
+  // TODO(Tango992): remove this if `getOptions` already validates encoding
+  // if (options?.encoding) {
+  //   try {
+  //     new TextDecoder(options.encoding);
+  //   } catch {
+  //     throw new Error(
+  //       `TypeError [ERR_INVALID_OPT_VALUE_ENCODING]: The value "${options.encoding}" is invalid for option "encoding"`,
+  //     );
+  //   }
+  // }
 
   const result: Array<string | Dirent> = [];
   const dirs = [path];
@@ -139,16 +139,18 @@ export function readdirSync(
   options?: readDirOptions,
 ): Array<string | Dirent> {
   path = getValidatedPath(path).toString();
+  options = getOptions<readDirOptions>(options);
 
-  if (options?.encoding) {
-    try {
-      new TextDecoder(options.encoding);
-    } catch {
-      throw new Error(
-        `TypeError [ERR_INVALID_OPT_VALUE_ENCODING]: The value "${options.encoding}" is invalid for option "encoding"`,
-      );
-    }
-  }
+  // TODO(Tango992): remove this if `getOptions` already validates encoding
+  // if (options?.encoding) {
+  //   try {
+  //     new TextDecoder(options.encoding);
+  //   } catch {
+  //     throw new Error(
+  //       `TypeError [ERR_INVALID_OPT_VALUE_ENCODING]: The value "${options.encoding}" is invalid for option "encoding"`,
+  //     );
+  //   }
+  // }
 
   const result: Array<string | Dirent> = [];
   const dirs = [path];

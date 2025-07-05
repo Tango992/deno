@@ -4,22 +4,18 @@
 import { TextDecoder, TextEncoder } from "ext:deno_web/08_text_encoding.js";
 import { existsSync } from "ext:deno_node/_fs/_fs_exists.ts";
 import { mkdir, mkdirSync } from "ext:deno_node/_fs/_fs_mkdir.ts";
-import {
-  ERR_INVALID_ARG_TYPE,
-  ERR_INVALID_OPT_VALUE_ENCODING,
-} from "ext:deno_node/internal/errors.ts";
+import { ERR_INVALID_ARG_TYPE } from "ext:deno_node/internal/errors.ts";
 import { promisify } from "ext:deno_node/internal/util.mjs";
 import { primordials } from "ext:core/mod.js";
+import { getOptions } from "ext:deno_node/internal/fs/utils.mjs";
 
 const {
-  ObjectPrototypeIsPrototypeOf,
   Array,
   SafeArrayIterator,
   MathRandom,
   MathFloor,
   ArrayPrototypeJoin,
   ArrayPrototypeMap,
-  ObjectPrototype,
 } = primordials;
 
 export type mkdtempCallback = (
@@ -45,7 +41,7 @@ export function mkdtemp(
     throw new ERR_INVALID_ARG_TYPE("callback", "function", callback);
   }
 
-  const encoding: string | undefined = parseEncoding(optionsOrCallback);
+  const encoding = getOptions(optionsOrCallback).encoding;
   const path = tempDirPath(prefix);
 
   mkdir(
@@ -68,34 +64,11 @@ export function mkdtempSync(
   prefix: string,
   options?: { encoding: string } | string,
 ): string {
-  const encoding: string | undefined = parseEncoding(options);
+  const encoding = getOptions(options).encoding;
   const path = tempDirPath(prefix);
 
   mkdirSync(path, { recursive: false, mode: 0o700 });
   return decode(path, encoding);
-}
-
-function parseEncoding(
-  optionsOrCallback?: { encoding: string } | string | mkdtempCallback,
-): string | undefined {
-  let encoding: string | undefined;
-  if (typeof optionsOrCallback === "function") {
-    encoding = undefined;
-  } else if (isOptionsObject(optionsOrCallback)) {
-    encoding = optionsOrCallback.encoding;
-  } else {
-    encoding = optionsOrCallback;
-  }
-
-  if (encoding) {
-    try {
-      new TextDecoder(encoding);
-    } catch {
-      throw new ERR_INVALID_OPT_VALUE_ENCODING(encoding);
-    }
-  }
-
-  return encoding;
 }
 
 function decode(str: string, encoding?: string): string {
@@ -125,12 +98,4 @@ function tempDirPath(prefix: string): string {
   } while (existsSync(path));
 
   return path;
-}
-
-function isOptionsObject(value: unknown): value is { encoding: string } {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    ObjectPrototypeIsPrototypeOf(ObjectPrototype, value)
-  );
 }
