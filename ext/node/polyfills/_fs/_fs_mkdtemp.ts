@@ -10,17 +10,21 @@ import {
 } from "ext:deno_node/internal/errors.ts";
 import { promisify } from "ext:deno_node/internal/util.mjs";
 import { primordials } from "ext:core/mod.js";
+import { getOptions } from "ext:deno_node/internal/fs/utils.mjs";
+import { type BufferEncoding } from "ext:deno_node/_global.d.ts";
 
 const {
-  ObjectPrototypeIsPrototypeOf,
   Array,
   SafeArrayIterator,
   MathRandom,
   MathFloor,
   ArrayPrototypeJoin,
   ArrayPrototypeMap,
-  ObjectPrototype,
 } = primordials;
+
+type ObjectEncodingOptions = {
+  encoding?: BufferEncoding;
+};
 
 export type mkdtempCallback = (
   err: Error | null,
@@ -31,12 +35,12 @@ export type mkdtempCallback = (
 export function mkdtemp(prefix: string, callback: mkdtempCallback): void;
 export function mkdtemp(
   prefix: string,
-  options: { encoding: string } | string,
+  options: ObjectEncodingOptions | string,
   callback: mkdtempCallback,
 ): void;
 export function mkdtemp(
   prefix: string,
-  optionsOrCallback: { encoding: string } | string | mkdtempCallback,
+  optionsOrCallback: ObjectEncodingOptions | string | mkdtempCallback,
   maybeCallback?: mkdtempCallback,
 ) {
   const callback: mkdtempCallback | undefined =
@@ -60,13 +64,13 @@ export function mkdtemp(
 
 export const mkdtempPromise = promisify(mkdtemp) as (
   prefix: string,
-  options?: { encoding: string } | string,
+  options?: ObjectEncodingOptions | string,
 ) => Promise<string>;
 
 // https://nodejs.org/dist/latest-v15.x/docs/api/fs.html#fs_fs_mkdtempsync_prefix_options
 export function mkdtempSync(
   prefix: string,
-  options?: { encoding: string } | string,
+  options?: ObjectEncodingOptions | string,
 ): string {
   const encoding: string | undefined = parseEncoding(options);
   const path = tempDirPath(prefix);
@@ -76,16 +80,10 @@ export function mkdtempSync(
 }
 
 function parseEncoding(
-  optionsOrCallback?: { encoding: string } | string | mkdtempCallback,
+  optionsOrCallback?: ObjectEncodingOptions | string | mkdtempCallback,
 ): string | undefined {
-  let encoding: string | undefined;
-  if (typeof optionsOrCallback === "function") {
-    encoding = undefined;
-  } else if (isOptionsObject(optionsOrCallback)) {
-    encoding = optionsOrCallback.encoding;
-  } else {
-    encoding = optionsOrCallback;
-  }
+  const encoding =
+    getOptions<ObjectEncodingOptions>(optionsOrCallback).encoding;
 
   if (encoding) {
     try {
@@ -125,12 +123,4 @@ function tempDirPath(prefix: string): string {
   } while (existsSync(path));
 
   return path;
-}
-
-function isOptionsObject(value: unknown): value is { encoding: string } {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    ObjectPrototypeIsPrototypeOf(ObjectPrototype, value)
-  );
 }

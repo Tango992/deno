@@ -8,6 +8,7 @@ import { MaybeEmpty, notImplemented } from "ext:deno_node/_utils.ts";
 import { pathFromURL } from "ext:deno_web/00_infra.js";
 import { promisify } from "ext:deno_node/internal/util.mjs";
 import { denoErrorToNodeError } from "ext:deno_node/internal/errors.ts";
+import { getOptions } from "ext:deno_node/internal/fs/utils.mjs";
 
 type ReadlinkCallback = (
   err: MaybeEmpty<Error>,
@@ -20,7 +21,7 @@ interface ReadlinkOptions {
 
 function maybeEncode(
   data: string,
-  encoding: string | null,
+  encoding?: string | null,
 ): string | Uint8Array {
   if (encoding === "buffer") {
     return new TextEncoder().encode(data);
@@ -28,22 +29,23 @@ function maybeEncode(
   return data;
 }
 
+// TODO(Tango992): Spike if this is needed
 function getEncoding(
-  optOrCallback?: ReadlinkOptions | ReadlinkCallback,
+  encoding?: string | null,
 ): string | null {
-  if (!optOrCallback || typeof optOrCallback === "function") {
+  if (!encoding) {
     return null;
   } else {
-    if (optOrCallback.encoding) {
+    if (encoding) {
       if (
-        optOrCallback.encoding === "utf8" ||
-        optOrCallback.encoding === "utf-8"
+        encoding === "utf8" ||
+        encoding === "utf-8"
       ) {
         return "utf8";
-      } else if (optOrCallback.encoding === "buffer") {
+      } else if (encoding === "buffer") {
         return "buffer";
       } else {
-        notImplemented(`fs.readlink encoding=${optOrCallback.encoding}`);
+        notImplemented(`fs.readlink encoding=${encoding}`);
       }
     }
     return null;
@@ -64,10 +66,10 @@ export function readlink(
     cb = callback;
   }
 
-  const encoding = getEncoding(optOrCallback);
+  const options = getOptions<ReadlinkOptions>(optOrCallback);
 
   Deno.readLink(path).then((data: string) => {
-    const res = maybeEncode(data, encoding);
+    const res = maybeEncode(data, getEncoding(options.encoding));
     if (cb) cb(null, res);
   }, (err: Error) => {
     if (cb) {
@@ -89,9 +91,10 @@ export function readlinkSync(
   opt?: ReadlinkOptions,
 ): string | Uint8Array {
   path = path instanceof URL ? pathFromURL(path) : path;
+  opt = getOptions<ReadlinkOptions>(opt);
 
   try {
-    return maybeEncode(Deno.readLinkSync(path), getEncoding(opt));
+    return maybeEncode(Deno.readLinkSync(path), getEncoding(opt.encoding));
   } catch (error) {
     throw denoErrorToNodeError(error, {
       syscall: "readlink",

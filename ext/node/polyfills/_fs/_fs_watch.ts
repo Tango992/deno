@@ -7,7 +7,10 @@ import { basename } from "node:path";
 import { EventEmitter } from "node:events";
 import { notImplemented } from "ext:deno_node/_utils.ts";
 import { promisify } from "node:util";
-import { getValidatedPath } from "ext:deno_node/internal/fs/utils.mjs";
+import {
+  getOptions,
+  getValidatedPath,
+} from "ext:deno_node/internal/fs/utils.mjs";
 import { validateFunction } from "ext:deno_node/internal/validators.mjs";
 import { stat, Stats } from "ext:deno_node/_fs/_fs_stat.ts";
 import { Buffer } from "node:buffer";
@@ -99,18 +102,13 @@ export function watch(filename: string | URL): FSWatcher;
 export function watch(
   filename: string | URL,
   optionsOrListener?: watchOptions | watchListener,
-  optionsOrListener2?: watchOptions | watchListener,
+  listener?: watchListener,
 ) {
-  const listener = typeof optionsOrListener === "function"
-    ? optionsOrListener
-    : typeof optionsOrListener2 === "function"
-    ? optionsOrListener2
-    : undefined;
-  const options = typeof optionsOrListener === "object"
-    ? optionsOrListener
-    : typeof optionsOrListener2 === "object"
-    ? optionsOrListener2
-    : undefined;
+  if (typeof optionsOrListener === "function") {
+    listener = optionsOrListener;
+  }
+
+  const options = getOptions<watchOptions>(optionsOrListener);
 
   const watchPath = getValidatedPath(filename).toString();
 
@@ -164,6 +162,7 @@ export function watchPromise(
     signal?: AbortSignal;
   },
 ): AsyncIterable<{ eventType: string; filename: string | Buffer | null }> {
+  options = getOptions(options);
   const watchPath = getValidatedPath(filename).toString();
 
   const watcher = Deno.watchFs(watchPath, {
