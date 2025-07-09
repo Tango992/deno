@@ -13,12 +13,13 @@ import {
   O_TRUNC,
   O_WRONLY,
 } from "ext:deno_node/_fs/_fs_constants.ts";
-import { getOpenOptions } from "ext:deno_node/_fs/_fs_common.ts";
+import { getOpenOptions, makeCallback } from "ext:deno_node/_fs/_fs_common.ts";
 import { parseFileMode } from "ext:deno_node/internal/validators.mjs";
 import { ERR_INVALID_ARG_TYPE } from "ext:deno_node/internal/errors.ts";
 import { getValidatedPath } from "ext:deno_node/internal/fs/utils.mjs";
 import { FileHandle } from "ext:deno_node/internal/fs/handle.ts";
 import type { Buffer } from "node:buffer";
+import type { FsFile } from "ext:deno_fs/30_fs.js";
 
 function existsSync(filePath: string | URL): boolean {
   try {
@@ -53,7 +54,7 @@ export type openFlags =
   | "wx+"
   | number;
 
-type openCallback = (err: Error | null, fd: number) => void;
+type openCallback = (err: Error | null, fd?: number) => void;
 
 function convertFlagAndModeToOptions(
   flag?: openFlags,
@@ -102,13 +103,7 @@ export function open(
     mode = parseFileMode(mode, "mode", 0o666);
   }
 
-  if (typeof callback !== "function") {
-    throw new ERR_INVALID_ARG_TYPE(
-      "callback",
-      "function",
-      callback,
-    );
-  }
+  const cb = makeCallback(callback);
 
   if (flags === undefined) {
     flags = "r";
@@ -119,7 +114,7 @@ export function open(
     existsSync(path as string)
   ) {
     const err = new Error(`EEXIST: file already exists, open '${path}'`);
-    (callback as (err: Error) => void)(err);
+    cb(err);
   } else {
     if (flags === "as" || flags === "as+") {
       let err: Error | null = null, res: number;
@@ -129,9 +124,9 @@ export function open(
         err = error instanceof Error ? error : new Error("[non-error thrown]");
       }
       if (err) {
-        (callback as (err: Error) => void)(err);
+        cb(err);
       } else {
-        callback(null, res!);
+        cb(null, res!);
       }
       return;
     }
@@ -139,8 +134,8 @@ export function open(
       path as string,
       convertFlagAndModeToOptions(flags as openFlags, mode),
     ).then(
-      (file) => callback!(null, file[internalRidSymbol]),
-      (err) => (callback as (err: Error) => void)(err),
+      (file: FsFile) => cb(null, file[internalRidSymbol] as unknown as number),
+      (err: Error) => cb(err),
     );
   }
 }
