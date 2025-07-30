@@ -13,7 +13,6 @@ import {
 import { Buffer } from "node:buffer";
 import { readAll, readAllSync } from "ext:deno_io/12_io.js";
 import { FileHandle } from "ext:deno_node/internal/fs/handle.ts";
-import { pathFromURL } from "ext:deno_web/00_infra.js";
 import {
   BinaryEncodings,
   Encodings,
@@ -21,6 +20,10 @@ import {
 } from "ext:deno_node/_utils.ts";
 import { FsFile } from "ext:deno_fs/30_fs.js";
 import { denoErrorToNodeError } from "ext:deno_node/internal/errors.ts";
+import {
+  assertEncoding,
+  getValidatedPathToString,
+} from "ext:deno_node/internal/fs/utils.mjs";
 
 function maybeDecode(data: Uint8Array, encoding: TextEncodings): string;
 function maybeDecode(
@@ -40,7 +43,7 @@ type TextCallback = (err: Error | null, data?: string) => void;
 type BinaryCallback = (err: Error | null, data?: Buffer) => void;
 type GenericCallback = (err: Error | null, data?: string | Buffer) => void;
 type Callback = TextCallback | BinaryCallback | GenericCallback;
-type Path = string | URL | FileHandle | number;
+type Path = string | Buffer | URL | FileHandle | number;
 
 export function readFile(
   path: Path,
@@ -63,7 +66,10 @@ export function readFile(
   optOrCallback?: FileOptionsArgument | Callback | null | undefined,
   callback?: Callback,
 ) {
-  path = path instanceof URL ? pathFromURL(path) : path;
+  if (typeof path !== "number" && !(path instanceof FileHandle)) {
+    path = getValidatedPathToString(path);
+  }
+
   let cb: Callback | undefined;
   if (typeof optOrCallback === "function") {
     cb = optOrCallback;
@@ -72,6 +78,7 @@ export function readFile(
   }
 
   const encoding = getEncoding(optOrCallback);
+  assertEncoding(encoding);
   const signal = getSignal(optOrCallback);
 
   let p: Promise<Uint8Array>;
@@ -122,7 +129,7 @@ export function readFileSync(
   path: string | URL | number,
   opt?: FileOptionsArgument,
 ): string | Buffer {
-  path = path instanceof URL ? pathFromURL(path) : path;
+  path = typeof path !== "number" ? getValidatedPathToString(path) : path;
   let data;
   if (typeof path === "number") {
     const fsFile = new FsFile(path, Symbol.for("Deno.internal.FsFile"));
@@ -135,6 +142,7 @@ export function readFileSync(
     }
   }
   const encoding = getEncoding(opt);
+  assertEncoding(encoding);
   if (encoding && encoding !== "binary") {
     const text = maybeDecode(data, encoding);
     return text;

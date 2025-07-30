@@ -7,6 +7,9 @@ import { denoErrorToNodeError } from "ext:deno_node/internal/errors.ts";
 import { promisify } from "ext:deno_node/internal/util.mjs";
 import { primordials } from "ext:core/mod.js";
 import { getValidatedPath } from "ext:deno_node/internal/fs/utils.mjs";
+import { validateFunction } from "ext:deno_node/internal/validators.mjs";
+import type { Buffer } from "node:buffer";
+import * as pathModule from "node:path";
 
 const { ObjectCreate, ObjectAssign } = primordials;
 
@@ -354,19 +357,19 @@ export type statCallbackBigInt = (err: Error | null, stat: BigIntStats) => void;
 
 export type statCallback = (err: Error | null, stat: Stats) => void;
 
-export function stat(path: string | URL, callback: statCallback): void;
+export function stat(path: string | Buffer | URL, callback: statCallback): void;
 export function stat(
-  path: string | URL,
+  path: string | Buffer | URL,
   options: { bigint: false },
   callback: statCallback,
 ): void;
 export function stat(
-  path: string | URL,
+  path: string | Buffer | URL,
   options: { bigint: true },
   callback: statCallbackBigInt,
 ): void;
 export function stat(
-  path: string | URL,
+  path: string | Buffer | URL,
   optionsOrCallback: statCallback | statCallbackBigInt | statOptions,
   maybeCallback?: statCallback | statCallbackBigInt,
 ) {
@@ -381,9 +384,9 @@ export function stat(
     : { bigint: false };
 
   path = getValidatedPath(path).toString();
-  if (!callback) throw new Error("No callback function supplied");
+  validateFunction(callback, "callback");
 
-  Deno.stat(path).then(
+  Deno.stat(pathModule.toNamespacedPath(path)).then(
     (stat) => callback(null, CFISBIS(stat, options.bigint)),
     (err) =>
       callback(
@@ -393,28 +396,34 @@ export function stat(
 }
 
 export const statPromise = promisify(stat) as (
-  & ((path: string | URL) => Promise<Stats>)
-  & ((path: string | URL, options: { bigint: false }) => Promise<Stats>)
-  & ((path: string | URL, options: { bigint: true }) => Promise<BigIntStats>)
+  & ((path: string | Buffer | URL) => Promise<Stats>)
+  & ((
+    path: string | Buffer | URL,
+    options: { bigint: false },
+  ) => Promise<Stats>)
+  & ((
+    path: string | Buffer | URL,
+    options: { bigint: true },
+  ) => Promise<BigIntStats>)
 );
 
-export function statSync(path: string | URL): Stats;
+export function statSync(path: string | Buffer | URL): Stats;
 export function statSync(
-  path: string | URL,
+  path: string | Buffer | URL,
   options: { bigint: false; throwIfNoEntry?: boolean },
 ): Stats;
 export function statSync(
-  path: string | URL,
+  path: string | Buffer | URL,
   options: { bigint: true; throwIfNoEntry?: boolean },
 ): BigIntStats;
 export function statSync(
-  path: string | URL,
+  path: string | Buffer | URL,
   options: statOptions = { bigint: false, throwIfNoEntry: true },
 ): Stats | BigIntStats | undefined {
   path = getValidatedPath(path).toString();
 
   try {
-    const origin = Deno.statSync(path);
+    const origin = Deno.statSync(pathModule.toNamespacedPath(path));
     return CFISBIS(origin, options.bigint);
   } catch (err) {
     if (
