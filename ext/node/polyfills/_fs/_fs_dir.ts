@@ -6,14 +6,22 @@ import {
   direntFromDeno,
 } from "ext:deno_node/internal/fs/utils.mjs";
 import { assert } from "ext:deno_node/_util/asserts.ts";
-import { ERR_MISSING_ARGS } from "ext:deno_node/internal/errors.ts";
+import {
+  ERR_DIR_CLOSED,
+  ERR_DIR_CONCURRENT_OPERATION,
+  ERR_MISSING_ARGS,
+} from "ext:deno_node/internal/errors.ts";
 import { TextDecoder } from "ext:deno_web/08_text_encoding.js";
+import { validateFunction } from "ext:deno_node/internal/validators.mjs";
+import process from "node:process";
 
 const {
   Promise,
   ObjectPrototypeIsPrototypeOf,
   Uint8ArrayPrototype,
   PromisePrototypeThen,
+  PromiseReject,
+  PromiseResolve,
   SymbolAsyncIterator,
   ArrayIteratorPrototypeNext,
   AsyncGeneratorPrototypeNext,
@@ -21,6 +29,7 @@ const {
 } = primordials;
 
 export default class Dir {
+  #closed = false;
   #dirPath: string | Uint8Array;
   #syncIterator!: Iterator<Deno.DirEntry, undefined> | null;
   #asyncIterator!: AsyncIterator<Deno.DirEntry, undefined> | null;
@@ -87,14 +96,25 @@ export default class Dir {
    * directories, and therefore does not need to close directories when
    * finished reading.
    */
-  // deno-lint-ignore no-explicit-any
-  close(callback?: (...args: any[]) => void): Promise<void> {
-    return new Promise((resolve) => {
-      if (callback) {
-        callback(null);
+  close(callback?: (...args: unknown[]) => void): Promise<void> | void {
+    // Promise
+    if (callback === undefined) {
+      if (this.#closed === true) {
+        return PromiseReject(new ERR_DIR_CLOSED());
       }
-      resolve();
-    });
+      return PromiseResolve();
+    }
+
+    // Callback
+    validateFunction(callback, 'callback');
+  
+    if (this.#closed === true) {
+      process.nextTick(callback, new ERR_DIR_CLOSED());
+      return;
+    }
+
+    this.#closed = true;
+    callback(null);
   }
 
   /**
@@ -103,7 +123,15 @@ export default class Dir {
    * finished reading
    */
   closeSync() {
-    //No op
+    if (this.#closed === true) {
+      throw new ERR_DIR_CLOSED();
+    }
+
+    if (this.#syncIterator || this.#asyncIterator) {
+      throw new ERR_DIR_CONCURRENT_OPERATION();
+    }
+
+    this.#closed = true;
   }
 
   async *[SymbolAsyncIterator](): AsyncIterableIterator<Dirent> {
