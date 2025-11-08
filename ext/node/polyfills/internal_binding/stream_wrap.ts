@@ -149,9 +149,11 @@ export class LibuvStreamWrap extends HandleWrap {
    */
   readStart(): number {
     if (!this.#reading) {
+      console.log("got readStart on branch !this.#reading");
       this.#reading = true;
       this.#read();
     }
+    console.log("got readStart on branch this.#reading");
 
     return 0;
   }
@@ -161,6 +163,7 @@ export class LibuvStreamWrap extends HandleWrap {
    * @return An error status code.
    */
   readStop(): number {
+    console.log("readStop called");
     this.#reading = false;
     if (this.cancelHandle) {
       core.close(this.cancelHandle);
@@ -346,6 +349,10 @@ export class LibuvStreamWrap extends HandleWrap {
 
   /** Internal method for reading from the attached stream. */
   async #read() {
+    console.log(
+      "LibuvStreamWrap.#read on rid",
+      this[kStreamBaseField]![internalRidSymbol],
+    );
     // Queue the read operation and allow TLS upgrades to complete.
     //
     // This is done to ensure that the resource is not locked up by

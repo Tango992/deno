@@ -343,6 +343,7 @@ function _afterConnect(
   req: PipeConnectWrap | TCPConnectWrap,
   readable: boolean,
   writable: boolean,
+  preventInitialRead?: boolean,
 ) {
   let socket = handle[ownerSymbol];
 
@@ -374,19 +375,24 @@ function _afterConnect(
 
     socket._unrefTimer();
 
+    console.log("emitted connnect");
     socket.emit("connect");
     socket.emit("ready");
 
     // Deno specific: run tls handshake if it's from a tls socket
     // This swaps the handle[kStreamBaseField] from TcpConn to TlsConn
     if (typeof handle.afterConnectTls === "function") {
+      console.log("calling handle.afterConnectTls()");
+
       handle.afterConnectTls();
     }
 
     // Start the first read, or get an immediate EOF.
     // this doesn't actually consume any bytes, because len=0.
-    if (readable && !socket.isPaused()) {
+    if (readable && !socket.isPaused() && !preventInitialRead) {
+      console.log("calling socket.read");
       socket.read(0);
+      // socket.readStop();
     }
   } else {
     socket.connecting = false;
@@ -488,7 +494,23 @@ function _afterConnectMultiple(
     return;
   }
 
-  _afterConnect(status, self._handle, req, readable, writable);
+  console.log(
+    "connect/multiple: successful connection to %s:%s",
+    req.address,
+    req.port,
+  );
+  console.log(
+    "attempting to call _afterConnect with context.preventInitialRead:",
+    context.preventInitialRead,
+  );
+  _afterConnect(
+    status,
+    self._handle,
+    req,
+    readable,
+    writable,
+    context.preventInitialRead,
+  );
 }
 
 function _internalConnectMultipleTimeout(context, req, handle) {
@@ -788,6 +810,7 @@ function _writeAfterFIN(
 }
 
 function _tryReadStart(socket: Socket) {
+  console.log("_tryReadStart");
   // Not already reading, start the flow.
   debug("Socket._handle.readStart");
   socket._handle!.reading = true;
@@ -841,6 +864,7 @@ function _lookupAndConnect(
   self: Socket,
   options: TcpSocketConnectOptions,
 ) {
+  console.log("called _lookupAndConnect");
   const { localAddress, localPort } = options;
   const host = options.host || "localhost";
   let { port, autoSelectFamilyAttemptTimeout, autoSelectFamily } = options;
@@ -886,6 +910,7 @@ function _lookupAndConnect(
   // If host is an IP, skip performing a lookup
   const addressType = isIP(host);
   if (addressType) {
+    console.log("_lookupAndConnect: host is an IP, skipping lookup", host);
     defaultTriggerAsyncIdScope(self[asyncIdSymbol], nextTick, () => {
       if (self.connecting) {
         defaultTriggerAsyncIdScope(
@@ -933,6 +958,7 @@ function _lookupAndConnect(
     dnsOpts.family !== 4 && dnsOpts.family !== 6 && !localAddress &&
     autoSelectFamily
   ) {
+    console.log("_lookupAndConnect: autoSelectFamily is enabled");
     debug("connect: autodetecting");
 
     dnsOpts.all = true;
@@ -1140,6 +1166,7 @@ function _lookupAndConnectMultiple(
         timeout,
         [kTimeout]: null,
         errors: [],
+        preventInitialRead: options.preventInitialRead || false,
       };
 
       self._unrefTimer();
@@ -1272,6 +1299,7 @@ export function Socket(options) {
       this._handle.readStop();
       this.readableFlowing = false;
     } else if (!options.manualStart) {
+      console.log("Socket.options.manualStart is false, starting read");
       this.read(0);
     }
   }
@@ -1280,6 +1308,7 @@ Object.setPrototypeOf(Socket.prototype, Duplex.prototype);
 Object.setPrototypeOf(Socket, Duplex);
 
 Socket.prototype.connect = function (...args) {
+  console.log("Socket.prototype.connect called");
   let normalized;
 
   if (
@@ -1406,7 +1435,11 @@ Socket.prototype.setNoDelay = function (noDelay) {
 
 Socket.prototype.setKeepAlive = function (enable, initialDelay) {
   if (!this._handle) {
-    this.once("connect", () => this.setKeepAlive(enable, initialDelay));
+    console.log("deferring setKeepAlive until connect");
+    this.once("connect", () => {
+      console.log("calling setKeepAlive after connect");
+      return this.setKeepAlive(enable, initialDelay);
+    });
 
     return this;
   }
@@ -1578,9 +1611,11 @@ Socket.prototype.read = function (size) {
     this._handle &&
     !this._handle.reading
   ) {
+    console.log("called Socket.prototype.read on _tryReadStart");
     _tryReadStart(this);
   }
 
+  console.log("called Socket.prototype.read on Duplex.prototype.read.call");
   return Duplex.prototype.read.call(this, size);
 };
 
@@ -1653,7 +1688,10 @@ Socket.prototype._read = function (size) {
   debug("_read");
   if (this.connecting || !this._handle) {
     debug("_read wait for connection");
-    this.once("connect", () => this._read(size));
+    this.once("connect", () => {
+      console.log("Socket.prototype._read ");
+      return this._read(size);
+    });
   } else if (!this._handle.reading) {
     _tryReadStart(this);
   }
@@ -1858,6 +1896,10 @@ export function connect(...args: unknown[]) {
     socket.setTimeout(options.timeout);
   }
 
+  console.log(
+    "net.connect options.preventInitialRead:",
+    options.preventInitialRead,
+  );
   return socket.connect(normalized);
 }
 

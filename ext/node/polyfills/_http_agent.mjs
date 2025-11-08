@@ -326,6 +326,12 @@ Agent.prototype.createSocket = function createSocket(req, options, cb) {
     cb(null, s);
   });
 
+  options.preventInitialRead = true;
+  console.log(
+    "this.createConnection === net.createConnection:",
+    this.createConnection === net.createConnection,
+  );
+
   const newSocket = this.createConnection(options, oncreate);
   if (newSocket) {
     oncreate(null, newSocket);

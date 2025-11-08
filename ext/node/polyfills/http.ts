@@ -422,6 +422,7 @@ class ClientRequest extends OutgoingMessage {
     }
 
     if (this.agent) {
+      console.log("using custom Agent:");
       this.agent.addRequest(this, optsWithoutSignal);
     } else {
       // No agent, default to Connection:close.
@@ -459,7 +460,7 @@ class ClientRequest extends OutgoingMessage {
     }
   }
 
-  _writeHeader() {
+  async _writeHeader() {
     const url = this._createUrlStrFromOptions();
 
     const headers = [];
@@ -491,7 +492,7 @@ class ClientRequest extends OutgoingMessage {
       span = builtinTracer().startSpan(this.method, { kind: 2 }); // Kind 2 = Client
       snapshot = enterSpan(span);
     }
-    (async () => {
+    await (async () => {
       try {
         const parsedUrl = new URL(url);
         const handle = this.socket._handle;
@@ -519,6 +520,7 @@ class ClientRequest extends OutgoingMessage {
         let baseConnRid;
         try {
           baseConnRid = handle[kStreamBaseField][internalRidSymbol];
+          console.log("baseConnRid:", baseConnRid);
         } catch (err) {
           throw (this.socket.errored || err);
         }
@@ -771,8 +773,11 @@ class ClientRequest extends OutgoingMessage {
       } else {
         // Note: this code is specific to deno to initiate a request.
         const onConnect = () => {
+          // socket._handle.readStop();
+          console.log("called onconnect");
+          // this.stop
           // Flush the internal buffers once socket is ready.
-          this._flushHeaders();
+          return this._flushHeaders();
         };
         this.socket = socket;
         this.emit("socket", socket);
@@ -783,8 +788,11 @@ class ClientRequest extends OutgoingMessage {
           socket.destroy(err);
         });
         if (socket.readyState === "opening") {
+          console.log('socket.readyState === "opening" branch');
           socket.on("connect", onConnect);
         } else {
+          console.log(`socket.readyState === ${socket.readyState}`);
+          // socket.on("connect", onConnect);
           onConnect();
         }
       }

@@ -600,6 +600,7 @@ where
   let local_addr = listener.local_addr()?;
   let listener_resource = NetworkListenerResource::new(listener);
   let rid = state.resource_table.add(listener_resource);
+  println!("op_net_listen_tcp added rid ${rid}");
 
   Ok((rid, IpAddr::from(local_addr)))
 }

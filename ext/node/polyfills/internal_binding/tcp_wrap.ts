@@ -377,11 +377,13 @@ export class TCP extends ConnectionWrap {
     this.#remotePort = port;
     this.#remoteFamily = isIP(address);
 
+    console.log(`connecting TCP. Address: ${address}, Port: ${port}`);
     op_net_connect_tcp(
       { hostname: address ?? "127.0.0.1", port },
       this.#netPermToken,
     ).then(
       ({ 0: rid, 1: localAddr, 2: remoteAddr }) => {
+        console.log("op_net_connect_tcp returns with rid", rid);
         // Incorrect / backwards, but correcting the local address and port with
         // what was actually used given we can't actually specify these in Deno.
         this.#address = req.localAddress = localAddr.hostname;

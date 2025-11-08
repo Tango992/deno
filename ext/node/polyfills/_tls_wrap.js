@@ -221,6 +221,7 @@ export class TLSSocket extends net.Socket {
           handle[kStreamBaseField] = conn;
           handle.upgrading = false;
           if (!handle.pauseOnCreate) {
+            console.log("starting read after TLS handshake");
             handle.readStart();
           }
 
