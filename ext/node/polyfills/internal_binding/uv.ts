@@ -108,6 +108,7 @@ const codeToErrorWindows: ErrorMapData = [
   [-4051, ["ENOTEMPTY", "directory not empty"]],
   [-4050, ["ENOTSOCK", "socket operation on non-socket"]],
   [-4049, ["ENOTSUP", "operation not supported on socket"]],
+  [-4026, ["EOVERFLOW", "value too large for defined data type"]],
   [-4048, ["EPERM", "operation not permitted"]],
   [-4047, ["EPIPE", "broken pipe"]],
   [-4046, ["EPROTO", "protocol error"]],
@@ -130,6 +131,10 @@ const codeToErrorWindows: ErrorMapData = [
   [-4029, ["ENOTTY", "inappropriate ioctl for device"]],
   [-4028, ["EFTYPE", "inappropriate file type or format"]],
   [-4027, ["EILSEQ", "illegal byte sequence"]],
+  [-4025, ["ESOCKTNOSUPPORT", "socket type not supported"]],
+  [-4024, ["ENODATA", "no data available"]],
+  [-4023, ["EUNATCH", "protocol driver not attached"]],
+  [-4022, ["ENOEXEC", "exec format error"]],
 ];
 
 const errorToCodeWindows: CodeMapData = codeToErrorWindows.map((
@@ -195,6 +200,7 @@ const codeToErrorDarwin: ErrorMapData = [
   [-66, ["ENOTEMPTY", "directory not empty"]],
   [-38, ["ENOTSOCK", "socket operation on non-socket"]],
   [-45, ["ENOTSUP", "operation not supported on socket"]],
+  [-84, ["EOVERFLOW", "value too large for defined data type"]],
   [-1, ["EPERM", "operation not permitted"]],
   [-32, ["EPIPE", "broken pipe"]],
   [-100, ["EPROTO", "protocol error"]],
@@ -217,6 +223,10 @@ const codeToErrorDarwin: ErrorMapData = [
   [-25, ["ENOTTY", "inappropriate ioctl for device"]],
   [-79, ["EFTYPE", "inappropriate file type or format"]],
   [-92, ["EILSEQ", "illegal byte sequence"]],
+  [-44, ["ESOCKTNOSUPPORT", "socket type not supported"]],
+  [-96, ["ENODATA", "no data available"]],
+  [-4023, ["EUNATCH", "protocol driver not attached"]],
+  [-8, ["ENOEXEC", "exec format error"]],
 ];
 
 const errorToCodeDarwin: CodeMapData = codeToErrorDarwin.map((
@@ -282,6 +292,7 @@ const codeToErrorLinux: ErrorMapData = [
   [-39, ["ENOTEMPTY", "directory not empty"]],
   [-88, ["ENOTSOCK", "socket operation on non-socket"]],
   [-95, ["ENOTSUP", "operation not supported on socket"]],
+  [-75, ["EOVERFLOW", "value too large for defined data type"]],
   [-1, ["EPERM", "operation not permitted"]],
   [-32, ["EPIPE", "broken pipe"]],
   [-71, ["EPROTO", "protocol error"]],
@@ -304,6 +315,10 @@ const codeToErrorLinux: ErrorMapData = [
   [-25, ["ENOTTY", "inappropriate ioctl for device"]],
   [-4028, ["EFTYPE", "inappropriate file type or format"]],
   [-84, ["EILSEQ", "illegal byte sequence"]],
+  [-94, ["ESOCKTNOSUPPORT", "socket type not supported"]],
+  [-61, ["ENODATA", "no data available"]],
+  [-49, ["EUNATCH", "protocol driver not attached"]],
+  [-8, ["ENOEXEC", "exec format error"]],
 ];
 
 const errorToCodeLinux: CodeMapData = codeToErrorLinux.map((
@@ -393,6 +408,9 @@ const codeToErrorFreebsd: ErrorMapData = [
   [-79, ["EFTYPE", "inappropriate file type or format"]],
   [-86, ["EILSEQ", "illegal byte sequence"]],
   [-44, ["ESOCKTNOSUPPORT", "socket type not supported"]],
+  [-9919, ["ENODATA", "no data available"]],
+  [-4023, ["EUNATCH", "protocol driver not attached"]],
+  [-8, ["ENOEXEC", "exec format error"]],
 ];
 
 const errorToCodeFreebsd: CodeMapData = codeToErrorFreebsd.map((
@@ -482,6 +500,9 @@ const codeToErrorOpenBSD: ErrorMapData = [
   [-79, ["EFTYPE", "inappropriate file type or format"]],
   [-84, ["EILSEQ", "illegal byte sequence"]],
   [-44, ["ESOCKTNOSUPPORT", "socket type not supported"]],
+  [-4025, ["ENODATA", "no data available"]],
+  [-4023, ["EUNATCH", "protocol driver not attached"]],
+  [-8, ["ENOEXEC", "exec format error"]],
 ];
 
 const errorToCodeOpenBSD: CodeMapData = codeToErrorOpenBSD.map((
