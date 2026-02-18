@@ -67,7 +67,6 @@ import {
   codeMap,
   errorMap,
   mapSysErrnoToUvErrno,
-  UV_EBADF,
 } from "ext:deno_node/internal_binding/uv.ts";
 import type * as nodeAssert from "node:assert";
 import { isWindows } from "ext:deno_node/_util/os.ts";
@@ -2765,7 +2764,7 @@ interface UvExceptionContext {
 export function denoErrorToNodeError(e: Error, ctx: UvExceptionContext) {
   if (ObjectPrototypeIsPrototypeOf(Deno.errors.BadResource.prototype, e)) {
     return uvException({
-      errno: UV_EBADF,
+      errno: codeMap.get("EBADF")!,
       ...ctx,
     });
   }
@@ -2788,7 +2787,7 @@ export function denoWriteFileErrorToNodeError(
 ) {
   if (ObjectPrototypeIsPrototypeOf(Deno.errors.BadResource.prototype, e)) {
     return uvException({
-      errno: UV_EBADF,
+      errno: codeMap.get("EBADF")!,
       ...ctx,
     });
   }

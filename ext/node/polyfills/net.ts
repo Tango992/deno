@@ -103,11 +103,7 @@ import { ShutdownWrap } from "ext:deno_node/internal_binding/stream_wrap.ts";
 import assert from "node:assert";
 import { isWindows } from "ext:deno_node/_util/os.ts";
 import { ADDRCONFIG, lookup as dnsLookup } from "node:dns";
-import {
-  codeMap,
-  UV_ECANCELED,
-  UV_ETIMEDOUT,
-} from "ext:deno_node/internal_binding/uv.ts";
+import { codeMap } from "ext:deno_node/internal_binding/uv.ts";
 import { guessHandleType } from "ext:deno_node/internal_binding/util.ts";
 import { debuglog } from "ext:deno_node/internal/util/debuglog.ts";
 import type { DuplexOptions } from "ext:deno_node/_stream.d.ts";
@@ -482,7 +478,7 @@ function _afterConnectMultiple(
 
     // Try the next address, unless we were aborted
     if (context.socket.connecting) {
-      _internalConnectMultiple(context, status === UV_ECANCELED);
+      _internalConnectMultiple(context, status === codeMap.get("ECANCELED")!);
     }
 
     return;
@@ -505,7 +501,10 @@ function _internalConnectMultipleTimeout(context, req, handle) {
   );
 
   req.oncomplete = undefined;
-  ArrayPrototypePush(context.errors, _createConnectionError(req, UV_ETIMEDOUT));
+  ArrayPrototypePush(
+    context.errors,
+    _createConnectionError(req, codeMap.get("ETIMEDOUT")!),
+  );
   handle.close();
 
   // Try the next address, unless we were aborted
