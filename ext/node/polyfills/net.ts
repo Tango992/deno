@@ -386,7 +386,7 @@ function _afterConnect(
     // Start the first read, or get an immediate EOF.
     // this doesn't actually consume any bytes, because len=0.
     if (readable && !socket.isPaused()) {
-      socket.read(0);
+      socket.on("connect", () => socket.read(0));
     }
   } else {
     socket.connecting = false;
