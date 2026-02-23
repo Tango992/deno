@@ -1,7 +1,8 @@
 // Copyright 2018-2026 the Deno authors. MIT license.
 
 import https from "node:https";
-import { assert, assertEquals } from "../unit/test_util.ts";
+import tls from "node:tls";
+import { assert, assertEquals, fail } from "../unit/test_util.ts";
 import type { AddressInfo } from "node:net";
 
 Deno.test("[node/https] Server.address() includes family property", async () => {
@@ -70,6 +71,62 @@ Deno.test({
     }, () => {
       return new Response("hi");
     });
+    await server.finished;
+  },
+});
+
+Deno.test({
+  name: "[node/https] custom Agent with async oncreate via tls.connect",
+  async fn() {
+    const cert = Deno.readTextFileSync("tests/testdata/tls/localhost.crt");
+    const key = Deno.readTextFileSync("tests/testdata/tls/localhost.key");
+
+    const server = Deno.serve({
+      port: 0,
+      cert,
+      key,
+      onListen({ port }) {
+        class CustomAgent extends https.Agent {
+          // @ts-expect-error we know this is the correct signature for createConnection
+          override createConnection(options, oncreate): net.Socket {
+            const socket = tls.connect({
+              port: options.port as number,
+              host: options.host as string,
+              servername: (options.servername || options.host) as string,
+              rejectUnauthorized: false,
+            });
+            socket.on("connect", () => {
+              oncreate(null, socket);
+            });
+          }
+        }
+
+        const agent = new CustomAgent();
+        const req = https.request(
+          `https://localhost:${port}`,
+          { agent, rejectUnauthorized: false },
+          (res) => {
+            let data = "";
+            res.on("data", (chunk: string) => data += chunk);
+            res.on("end", async () => {
+              assertEquals(res.statusCode, 200);
+              assertEquals(data, "ok");
+              await server.shutdown();
+            });
+          },
+        );
+
+        req.on("error", async (err) => {
+          await server.shutdown();
+          fail(`Request failed: ${err}`);
+        });
+
+        req.end();
+      },
+    }, () => {
+      return new Response("ok");
+    });
+
     await server.finished;
   },
 });

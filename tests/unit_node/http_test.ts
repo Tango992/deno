@@ -2287,3 +2287,53 @@ Deno.test("[node/http] ServerResponse.writeEarlyHints", async () => {
   });
   await promise;
 });
+
+Deno.test("[node/http] custom Agent with async oncreate in createConnection", async () => {
+  const { promise, resolve } = Promise.withResolvers<void>();
+
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200);
+    res.end("ok");
+  });
+
+  server.listen(0, () => {
+    const addr = server.address() as { port: number };
+
+    class CustomAgent extends http.Agent {
+      // @ts-expect-error we know this is the correct signature for createConnection
+      override createConnection(options, oncreate): net.Socket {
+        const socket = net.createConnection({
+          host: options.host,
+          port: options.port,
+        });
+        socket.on("connect", () => {
+          oncreate(null, socket);
+        });
+      }
+    }
+
+    const agent = new CustomAgent();
+    const req = http.request(
+      `http://127.0.0.1:${addr.port}`,
+      { agent },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => data += chunk);
+        res.on("end", () => {
+          assertEquals(res.statusCode, 200);
+          assertEquals(data, "ok");
+          server.close(() => resolve());
+        });
+      },
+    );
+
+    req.on("error", (err) => {
+      server.close();
+      fail(`Request failed: ${err.message}`);
+    });
+
+    req.end();
+  });
+
+  await promise;
+});
