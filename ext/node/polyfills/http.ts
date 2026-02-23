@@ -528,6 +528,10 @@ class ClientRequest extends OutgoingMessage {
           span.setAttribute("url.query", parsedUrl.search.slice(1));
         }
 
+        if (handle.upgrading) {
+          await handle.upgrading;
+        }
+
         let baseConnRid;
         try {
           baseConnRid = handle[kStreamBaseField][internalRidSymbol];

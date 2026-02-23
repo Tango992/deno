@@ -375,6 +375,7 @@ function _afterConnect(
     socket._unrefTimer();
 
     socket.emit("connect");
+    console.log("emitted socket.connect")
     socket.emit("ready");
 
     // Deno specific: run tls handshake if it's from a tls socket
@@ -386,7 +387,11 @@ function _afterConnect(
     // Start the first read, or get an immediate EOF.
     // this doesn't actually consume any bytes, because len=0.
     if (readable && !socket.isPaused()) {
-      socket.on("connect", () => socket.read(0));
+      console.log("Socket: starting to read after connect");
+      socket.on("connect", () => {
+        console.log("Socket: connected, starting to read");
+        socket.read(0)
+      });
     }
   } else {
     socket.connecting = false;

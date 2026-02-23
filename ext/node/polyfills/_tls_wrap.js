@@ -156,6 +156,7 @@ export class TLSSocket extends net.Socket {
     this.alpnProtocols = tlsOptions.ALPNProtocols;
     this.authorized = false;
     this.authorizationError = null;
+    this.encrypted = true;
     this[kRes] = null;
     this[kIsVerified] = false;
     this[kPendingSession] = null;
