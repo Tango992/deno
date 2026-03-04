@@ -639,6 +639,9 @@ impl<TGraphContainer: ModuleGraphContainer>
     maybe_referrer: Option<&ModuleSpecifier>,
     requested_module_type: &RequestedModuleType,
   ) -> Result<ModuleCodeStringSource, CliModuleLoaderError> {
+    println!(
+      "Loading module: {specifier} imported from {maybe_referrer:?} with requested type {requested_module_type}"
+    );
     // this loader maintains npm specifiers in dynamic imports when resolving
     // so that they can be properly preloaded, but now we might receive them
     // here, so we need to actually resolve them to a file: specifier here
@@ -1257,8 +1260,32 @@ impl<TGraphContainer: ModuleGraphContainer> ModuleLoader
       .shared
       .module_loader
       .load_prepared_module_for_source_map_sync(&graph, &specifier)
-      .ok()??;
-    source_map_from_code(source.source.as_bytes()).map(Cow::Owned)
+      .ok();
+    if let Some(Some(source)) = source {
+      return source_map_from_code(source.source.as_bytes()).map(Cow::Owned);
+    }
+
+    // Fallback for module kinds that can't be loaded through the sync prepared
+    // path (notably CJS wrappers, whose export analysis is async).
+    let is_root = graph.roots.contains(&specifier);
+    let inner = self.0.clone();
+    let specifier_for_load = specifier.clone();
+    let source = run_future_in_new_runtime(async move {
+      let maybe_referrer = if is_root {
+        None
+      } else {
+        Some(specifier_for_load.clone())
+      };
+      inner
+        .load_code_source(
+          &specifier_for_load,
+          maybe_referrer.as_ref(),
+          &RequestedModuleType::None,
+        )
+        .await
+    })
+    .ok()?;
+    source_map_from_code(source.code.as_bytes()).map(Cow::Owned)
   }
 
   fn load_external_source_map(

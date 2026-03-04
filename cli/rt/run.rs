@@ -494,6 +494,7 @@ impl ModuleLoader for EmbeddedModuleLoader {
         if is_maybe_cjs {
           let original_specifier = original_specifier.clone();
           let module_specifier = module_specifier.clone();
+          let is_main = maybe_referrer.is_none();
           let shared = self.shared.clone();
           deno_core::ModuleLoadResponse::Async(
             async move {
@@ -512,7 +513,11 @@ impl ModuleLoader for EmbeddedModuleLoader {
               };
               let source = shared
                 .node_code_translator
-                .translate_cjs_to_esm(&module_specifier, Some(source))
+                .translate_cjs_to_esm(
+                  &module_specifier,
+                  Some(source),
+                  is_main,
+                )
                 .await
                 .map_err(JsErrorBox::from_err)?;
               let module_source = match source {

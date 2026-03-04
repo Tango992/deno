@@ -188,7 +188,12 @@ impl<TSys: ModuleLoaderSys> ModuleLoader<TSys> {
   ) -> Result<LoadedModuleOrAsset<'a>, LoadCodeSourceError> {
     let source = match self
       .prepared_module_loader
-      .load_prepared_module(graph, specifier, requested_module_type)
+      .load_prepared_module(
+        graph,
+        specifier,
+        maybe_referrer,
+        requested_module_type,
+      )
       .await
       .map_err(LoadCodeSourceError::from)?
     {
@@ -281,6 +286,7 @@ impl<TSys: ModuleLoaderSys> PreparedModuleLoader<TSys> {
     &self,
     graph: &'graph ModuleGraph,
     specifier: &Url,
+    maybe_referrer: Option<&Url>,
     requested_module_type: &RequestedModuleType<'_>,
   ) -> Result<Option<LoadedModuleOrAsset<'graph>>, LoadPreparedModuleError> {
     // Note: keep this in sync with the sync version below
@@ -317,7 +323,12 @@ impl<TSys: ModuleLoaderSys> PreparedModuleLoader<TSys> {
         media_type,
         source,
       }) => self
-        .load_maybe_cjs(specifier, media_type, source)
+        .load_maybe_cjs(
+          specifier,
+          media_type,
+          source,
+          maybe_referrer.is_none(),
+        )
         .await
         .map(|text| {
           Some(LoadedModuleOrAsset::Module(LoadedModule {
@@ -533,6 +544,7 @@ impl<TSys: ModuleLoaderSys> PreparedModuleLoader<TSys> {
     specifier: &Url,
     media_type: MediaType,
     original_source: &ArcStr,
+    is_main: bool,
   ) -> Result<ArcStr, LoadMaybeCjsError> {
     let js_source = self
       .emitter
@@ -545,8 +557,13 @@ impl<TSys: ModuleLoaderSys> PreparedModuleLoader<TSys> {
       .await?;
     let text = self
       .node_code_translator
-      .translate_cjs_to_esm(specifier, Some(Cow::Borrowed(js_source.as_ref())))
+      .translate_cjs_to_esm(
+        specifier,
+        Some(Cow::Borrowed(js_source.as_ref())),
+        is_main,
+      )
       .await?;
+    println!("text: {text}");
     // at this point, we no longer need the parsed source in memory, so free it
     self.parsed_source_cache.free(specifier);
     Ok(match text {

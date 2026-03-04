@@ -6815,6 +6815,7 @@ version = "0.73.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.22.1",
  "boxed_error",
  "capacity_builder",
  "dashmap",

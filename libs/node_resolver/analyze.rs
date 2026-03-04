@@ -6,6 +6,8 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
 use deno_error::JsErrorBox;
 use deno_path_util::url_to_file_path;
 use futures::FutureExt;
@@ -601,6 +603,7 @@ impl<
     &self,
     entry_specifier: &Url,
     source: Option<Cow<'a, str>>,
+    is_main: bool,
   ) -> Result<Cow<'a, str>, TranslateCjsToEsmError> {
     let all_exports = if matches!(self.mode, NodeCodeTranslatorMode::Disabled) {
       return Ok(source.unwrap());
@@ -618,6 +621,7 @@ impl<
     Ok(Cow::Owned(exports_to_wrapper_module(
       entry_specifier,
       &all_exports,
+      is_main,
     )))
   }
 }
@@ -698,6 +702,7 @@ static RESERVED_WORDS: Lazy<HashSet<&str>> = Lazy::new(|| {
 fn exports_to_wrapper_module(
   entry_specifier: &Url,
   all_exports: &BTreeSet<String>,
+  is_main: bool,
 ) -> String {
   let quoted_entry_specifier_text = to_double_quote_string(
     url_to_file_path(entry_specifier).unwrap().to_str().unwrap(),
@@ -706,25 +711,26 @@ fn exports_to_wrapper_module(
     .iter()
     .map(|export| (export.as_str(), to_double_quote_string(export)))
     .collect::<Vec<_>>();
+
+  let source_map_base64 = source_map_base64_for_main_wrapper("node:module:internal_cjs_to_esm_wrapper");
+
   capacity_builder::StringBuilder::<String>::build(|builder| {
       let mut temp_var_count = 0;
       builder.append(
         r#"import { createRequire as __internalCreateRequire, Module as __internalModule } from "node:module";
-const require = __internalCreateRequire(import.meta.url);
 let mod;
-if (import.meta.main) {
-  mod = __internalModule._load("#,
+"#,
       );
-      builder.append(&quoted_entry_specifier_text);
-      builder.append(
-        r#", null, true)
-} else {
-  mod = require("#,
-      );
-      builder.append(&quoted_entry_specifier_text);
-      builder.append(r#");
-}
-"#);
+      if is_main {
+        builder.append("mod = __internalModule._load(");
+        builder.append(&quoted_entry_specifier_text);
+        builder.append(", null, true);\n");
+      } else {
+        builder.append("const require = __internalCreateRequire(import.meta.url);\n");
+        builder.append("mod = require(");
+        builder.append(&quoted_entry_specifier_text);
+        builder.append(");\n");
+      }
 
       for (export_name, quoted_name) in &export_names_with_quoted {
         if !matches!(*export_name, "default" | "module.exports") {
@@ -750,7 +756,23 @@ if (import.meta.main) {
         |builder| builder.append("mod"),
         &mut temp_var_count,
       );
+
+      if is_main {
+        builder.append("//# sourceMappingURL=data:application/json;base64,");
+        builder.append(&source_map_base64);
+        builder.append("\n");
+      }
     }).unwrap()
+}
+
+fn source_map_base64_for_main_wrapper(entry_specifier: &str) -> String {
+  let source_map = serde_json::json!({
+    "version": 3,
+    "sources": [entry_specifier],
+    "names": [],
+    "mappings": ";;AAAA",
+  });
+  BASE64_STANDARD.encode(source_map.to_string())
 }
 
 fn add_export<'a>(
@@ -821,17 +843,13 @@ mod tests {
     let exports = BTreeSet::from(
       ["static", "server", "app", "dashed-export", "3d"].map(|s| s.to_string()),
     );
-    let text = exports_to_wrapper_module(&url, &exports);
+    let text = exports_to_wrapper_module(&url, &exports, false);
     assert_eq!(
       text,
       r#"import { createRequire as __internalCreateRequire, Module as __internalModule } from "node:module";
-const require = __internalCreateRequire(import.meta.url);
 let mod;
-if (import.meta.main) {
-  mod = __internalModule._load("/test/test.ts", null, true)
-} else {
-  mod = require("/test/test.ts");
-}
+const require = __internalCreateRequire(import.meta.url);
+mod = require("/test/test.ts");
 const __deno_export_1__ = mod["3d"];
 export { __deno_export_1__ as "3d" };
 export const app = mod["app"];
@@ -844,6 +862,31 @@ export default mod;
 const __deno_export_4__ = mod;
 export { __deno_export_4__ as "module.exports" };
 "#
+    );
+
+    let text = exports_to_wrapper_module(&url, &exports, true);
+    let source_map_base64 = source_map_base64_for_main_wrapper(&url.as_str());
+    assert_eq!(
+      text,
+      format!(
+        r#"import {{ createRequire as __internalCreateRequire, Module as __internalModule }} from "node:module";
+let mod;
+mod = __internalModule._load("/test/test.ts", null, true);
+const __deno_export_1__ = mod["3d"];
+export {{ __deno_export_1__ as "3d" }};
+export const app = mod["app"];
+const __deno_export_2__ = mod["dashed-export"];
+export {{ __deno_export_2__ as "dashed-export" }};
+export const server = mod["server"];
+const __deno_export_3__ = mod["static"];
+export {{ __deno_export_3__ as "static" }};
+export default mod;
+const __deno_export_4__ = mod;
+export {{ __deno_export_4__ as "module.exports" }};
+//# sourceMappingURL=data:application/json;base64,{}
+"#,
+        source_map_base64
+      )
     );
   }
 

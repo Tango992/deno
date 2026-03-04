@@ -20,6 +20,7 @@ sync = ["deno_maybe_sync/sync", "deno_package_json/sync"]
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+base64.workspace = true
 boxed_error.workspace = true
 capacity_builder.workspace = true
 dashmap.workspace = true

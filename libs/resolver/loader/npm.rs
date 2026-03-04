@@ -211,7 +211,11 @@ impl<
           LoadedModuleSource::String(
             self
               .node_code_translator
-              .translate_cjs_to_esm(&specifier, Some(code))
+              .translate_cjs_to_esm(
+                &specifier,
+                Some(code),
+                maybe_referrer.is_none(),
+              )
               .await?
               .into_owned()
               .into(),
