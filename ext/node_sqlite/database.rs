@@ -44,6 +44,66 @@ const SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION: i32 = 1005;
 const SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE: i32 = 1021;
 const MAX_SAFE_JS_INTEGER: i64 = 9_007_199_254_740_991;
 
+// Number of SQLite limits we support
+const LIMIT_COUNT: usize = 11;
+
+// Mapping from JavaScript property names to SQLite limit constants
+// The index in this array corresponds to the SQLite limit constant value
+const LIMIT_JS_NAMES: [&str; LIMIT_COUNT] = [
+  "length",           // SQLITE_LIMIT_LENGTH = 0
+  "sqlLength",        // SQLITE_LIMIT_SQL_LENGTH = 1
+  "column",           // SQLITE_LIMIT_COLUMN = 2
+  "exprDepth",        // SQLITE_LIMIT_EXPR_DEPTH = 3
+  "compoundSelect",   // SQLITE_LIMIT_COMPOUND_SELECT = 4
+  "vdbeOp",           // SQLITE_LIMIT_VDBE_OP = 5
+  "functionArg",      // SQLITE_LIMIT_FUNCTION_ARG = 6
+  "attach",           // SQLITE_LIMIT_ATTACHED = 7
+  "likePatternLength", // SQLITE_LIMIT_LIKE_PATTERN_LENGTH = 8
+  "variableNumber",   // SQLITE_LIMIT_VARIABLE_NUMBER = 9
+  "triggerDepth",     // SQLITE_LIMIT_TRIGGER_DEPTH = 10
+];
+
+// Map rusqlite Limit enum to index
+fn limit_to_index(limit: Limit) -> usize {
+  match limit {
+    Limit::SQLITE_LIMIT_LENGTH => 0,
+    Limit::SQLITE_LIMIT_SQL_LENGTH => 1,
+    Limit::SQLITE_LIMIT_COLUMN => 2,
+    Limit::SQLITE_LIMIT_EXPR_DEPTH => 3,
+    Limit::SQLITE_LIMIT_COMPOUND_SELECT => 4,
+    Limit::SQLITE_LIMIT_VDBE_OP => 5,
+    Limit::SQLITE_LIMIT_FUNCTION_ARG => 6,
+    Limit::SQLITE_LIMIT_ATTACHED => 7,
+    Limit::SQLITE_LIMIT_LIKE_PATTERN_LENGTH => 8,
+    Limit::SQLITE_LIMIT_VARIABLE_NUMBER => 9,
+    Limit::SQLITE_LIMIT_TRIGGER_DEPTH => 10,
+    _ => unreachable!(),
+  }
+}
+
+// Map index to rusqlite Limit enum
+fn index_to_limit(idx: usize) -> Limit {
+  match idx {
+    0 => Limit::SQLITE_LIMIT_LENGTH,
+    1 => Limit::SQLITE_LIMIT_SQL_LENGTH,
+    2 => Limit::SQLITE_LIMIT_COLUMN,
+    3 => Limit::SQLITE_LIMIT_EXPR_DEPTH,
+    4 => Limit::SQLITE_LIMIT_COMPOUND_SELECT,
+    5 => Limit::SQLITE_LIMIT_VDBE_OP,
+    6 => Limit::SQLITE_LIMIT_FUNCTION_ARG,
+    7 => Limit::SQLITE_LIMIT_ATTACHED,
+    8 => Limit::SQLITE_LIMIT_LIKE_PATTERN_LENGTH,
+    9 => Limit::SQLITE_LIMIT_VARIABLE_NUMBER,
+    10 => Limit::SQLITE_LIMIT_TRIGGER_DEPTH,
+    _ => unreachable!(),
+  }
+}
+
+// Find limit index from JavaScript property name
+fn js_name_to_limit_index(name: &str) -> Option<usize> {
+  LIMIT_JS_NAMES.iter().position(|&n| n == name)
+}
+
 struct DatabaseSyncOptions {
   open: bool,
   enable_foreign_key_constraints: bool,
@@ -56,6 +116,7 @@ struct DatabaseSyncOptions {
   allow_unknown_named_params: bool,
   is_defensive_mode: bool,
   timeout: u64,
+  initial_limits: [Option<i32>; LIMIT_COUNT],
 }
 
 impl<'a> FromV8<'a> for DatabaseSyncOptions {
@@ -278,6 +339,7 @@ impl Default for DatabaseSyncOptions {
       allow_unknown_named_params: false,
       is_defensive_mode: true,
       timeout: 0,
+      initial_limits: [None; LIMIT_COUNT],
     }
   }
 }
